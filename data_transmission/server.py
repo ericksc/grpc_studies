@@ -1,9 +1,13 @@
 from threading import Thread
 from concurrent import futures
 import time
+import io
+import csv
 import grpc
 import demo_pb2_grpc
 import demo_pb2
+
+from database_connector import GenericDatabaseConnector
 
 __all__ = 'DemoServer'
 SERVER_ADDRESS = 'localhost:23333'
@@ -16,15 +20,33 @@ class DemoServer(demo_pb2_grpc.GRPCDemoServicer):
               (request.client_id, request.request_data))
 
 
-        def response_messages():
-            for i in range(5):
-                time.sleep(10)
-                response = demo_pb2.Response(
-                    server_id=SERVER_ID,
-                    response_data=("send by Python server, message=%d" % i))
-                yield response
+        def response_messages(server_id, sql):
+            def data2csv(data):
+                file_to_write_stream_data = io.StringIO()
+                csv_out = csv.writer(file_to_write_stream_data)
+                csv_out.writerows(data)
+                value = file_to_write_stream_data.getvalue()
+                file_to_write_stream_data.close()
+                return value
 
-        return response_messages()
+            def get_results(sql):
+                DATA_BASE = GenericDatabaseConnector()
+                DATA_BASE.cursor.execute(sql)
+                row = DATA_BASE.cursor.fetchmany(10000)
+                if len(row) > 0:
+                    yield data2csv([[i[0] for i in DATA_BASE.cursor.description]])
+                while row:
+                    yield data2csv(row)
+                    row = DATA_BASE.cursor.fetchmany(10000)
+
+            for row in get_results(sql):
+                yield demo_pb2.Response(
+                    server_id=SERVER_ID,
+                    response_data=(row)
+                )
+
+
+        return response_messages(server_id=SERVER_ID, sql=request.request_data)
 
 
 def main():

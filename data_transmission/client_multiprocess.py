@@ -3,45 +3,29 @@ import grpc
 
 import demo_pb2_grpc
 import demo_pb2
+import client as fast_client
+import slow_client as slow_client
 
-__all__ = [
-    'server_streaming_method'
-]
-
-SERVER_ADDRESS = "localhost:23333"
-CLIENT_ID = 1
-
-
-def server_streaming_method(stub):
-    print("--------------Call ServerStreamingMethod Begin--------------")
-    request = demo_pb2.Request(client_id=CLIENT_ID,
-                               request_data="called by Python client")
-    response_iterator = stub.ServerStreamingMethod(request)
-    for response in response_iterator:
-        print("recv from server(%d), message=%s" %
-              (response.server_id, response.response_data))
-
-    print("--------------Call ServerStreamingMethod Over---------------")
-
-
+from multiprocessing import Process
 
 def main():
-    with grpc.insecure_channel(SERVER_ADDRESS) as channel:
-        stub = demo_pb2_grpc.GRPCDemoStub(channel)
+    COUNT = 10
+    PROCESSES = {}
 
-        from multiprocessing import Process
-        import client
+    PROCESSES[f'slow'] = Process(target=slow_client.main)
+    PROCESSES[f'fast_0'] = Process(target=fast_client.main)
+    PROCESSES[f'fast_1'] = Process(target=fast_client.main)
+    # PROCESSES[f'fast_2'] = Process(target=fast_client.main)
+    # PROCESSES[f'fast_3'] = Process(target=fast_client.main)
+    # PROCESSES[f'fast_4'] = Process(target=fast_client.main)
+    # PROCESSES[f'fast_5'] = Process(target=fast_client.main)
+    # PROCESSES[f'fast_6'] = Process(target=fast_client.main)
+    # PROCESSES[f'fast_7'] = Process(target=fast_client.main)
+    # PROCESSES[f'fast_8'] = Process(target=fast_client.main)
+    # PROCESSES[f'fast_9'] = Process(target=fast_client.main)
 
-        COUNT = 10
-        PROCESSES = {}
-        for x in range(COUNT):
-            PROCESSES[x] = Process(target=client.main)
-
-        for x in range(COUNT):
-            PROCESSES[x].start()
-
-        #server_streaming_method(stub)
-
+    for p in PROCESSES.keys():
+        PROCESSES[p].start()
 
 if __name__ == '__main__':
     main()
