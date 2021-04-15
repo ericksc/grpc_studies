@@ -10,7 +10,7 @@ import demo_pb2
 from database_connector import GenericDatabaseConnector
 
 __all__ = 'DemoServer'
-SERVER_ADDRESS = 'localhost:23333'
+SERVER_ADDRESS = '[::]:23333'
 SERVER_ID = 1
 
 
