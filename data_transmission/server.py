@@ -8,6 +8,7 @@ import demo_pb2_grpc
 import demo_pb2
 
 from database_connector import GenericDatabaseConnector
+from timer import timing
 
 __all__ = 'DemoServer'
 SERVER_ADDRESS = '[::]:23333'
@@ -21,6 +22,7 @@ class DemoServer(demo_pb2_grpc.GRPCDemoServicer):
 
 
         def response_messages(server_id, sql):
+            @timing(current_module=request.client_id)  # pylint: disable=no-value-for-parameter
             def data2csv(data):
                 file_to_write_stream_data = io.StringIO()
                 csv_out = csv.writer(file_to_write_stream_data)
@@ -44,13 +46,17 @@ class DemoServer(demo_pb2_grpc.GRPCDemoServicer):
                     server_id=SERVER_ID,
                     response_data=(row)
                 )
-
-
         return response_messages(server_id=SERVER_ID, sql=request.request_data)
 
 
 def main():
-    server = grpc.server(futures.ThreadPoolExecutor())
+    #server = grpc.server(futures.ThreadPoolExecutor())
+
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=100000),options=[
+          ('grpc.max_send_message_length', 1000 * 1024 * 1024),
+          ('grpc.max_receive_message_length', 1000 * 1024 * 1024)
+          ])
+
 
     demo_pb2_grpc.add_GRPCDemoServicer_to_server(DemoServer(), server)
 

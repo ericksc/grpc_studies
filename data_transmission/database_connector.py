@@ -2,6 +2,8 @@
 Database connector
 """
 import logging
+import urllib
+import sqlalchemy as sa
 from pandas import read_sql_query
 import turbodbc
 from turbodbc import make_options, Megabytes
@@ -17,13 +19,14 @@ class GenericDatabaseConnector:
         """
         try:
             #[].[dbo].[big_table]
-            self.database = 'FlaskMVC'
-
+            self.database = 'AdventureWorks2016'
+            #[AdventureWorks2016].[Person].[Person]
             user = 'GFT\\ecsa'
             pwd = 'trusted'
 
-            server = 'CRPC009301'
+            server = 'CRPC015162\SQLDEV'
             driver = 'ODBC+Driver+17+for+SQL+Server'
+            driver = "{" + driver.replace("+", " ") + "}"
 
             options = make_options(read_buffer_size=Megabytes(100),
                                    parameter_sets_to_buffer=1000,
@@ -44,6 +47,17 @@ class GenericDatabaseConnector:
                                                database=self.database,
                                                uid=user,
                                                pwd=pwd, turbodbc_options=options).cursor()
+
+            con_string = f"DRIVER={driver};SERVER={server};DATABASE={self.database};Trusted_Connection=yes;" \
+                if pwd == 'trusted' \
+                else f"DRIVER={driver};" \
+                     f"SERVER={server};" \
+                     f"DATABASE={self.database};" \
+                     f"UID={user};" \
+                     f"PWD={pwd}"
+
+            quoted = urllib.parse.quote_plus(con_string)
+            self.engine = sa.create_engine('mssql+pyodbc:///?odbc_connect={}'.format(quoted))
 
         except turbodbc.exceptions.DatabaseError as ex:
             logging.exception(f"[Exception][database_connector][init][{str(ex)}]")
